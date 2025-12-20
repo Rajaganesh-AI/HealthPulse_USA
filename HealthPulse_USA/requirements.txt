@@ -1,0 +1,23 @@
+# Multi-Agent US Healthcare Article Generator
+# Python 3.11.0 Compatible
+
+# Core Framework
+streamlit>=1.40.0
+autogen-agentchat>=0.4.0
+autogen-ext[openai]>=0.4.0
+
+# OpenAI Integration
+openai>=1.0.0
+
+# Document Generation
+python-docx>=1.1.0
+fpdf2>=2.8.0
+reportlab>=4.0.0
+
+# Async Support
+aiohttp>=3.9.0
+nest-asyncio>=1.5.8
+
+# Environment & Utilities
+python-dotenv>=1.0.0
+pydantic>=2.0.0
