@@ -1,6 +1,6 @@
 """
 HealthPulse USA - Multi-Agent US Healthcare Article Generator
-Version: 8.3.0 - Real-time Step Progress & Fixed Duplicate ALL
+Version: 9.0.0 - Logo, Trending Ticker & Article Images
 """
 
 import streamlit as st
@@ -8,7 +8,7 @@ import asyncio
 import os
 import sys
 from datetime import datetime
-import time
+import random
 
 try:
     from dotenv import load_dotenv
@@ -27,10 +27,29 @@ from utils import ArticleExporter, get_download_filename
 
 st.set_page_config(page_title="HealthPulse USA", page_icon="🏥", layout="wide", initial_sidebar_state="collapsed")
 
-# CSS Styles
+# Trending healthcare topics (rotates)
+TRENDING_TOPICS = [
+    "🔥 Medicare 2025 Premium Changes",
+    "📈 ACA Enrollment Hits Record High",
+    "💊 Drug Price Negotiations Update",
+    "🏥 Hospital Staffing Crisis Deepens",
+    "🦠 New COVID Variant Monitoring",
+    "💰 Healthcare Costs Rising 7.5%",
+    "🩺 Telehealth Usage Surges 40%",
+    "⚕️ Mental Health Parity Laws Expand",
+    "🔬 AI in Diagnostics Breakthrough",
+    "📋 Prior Authorization Reform Bill",
+    "🌡️ Flu Season Peaks Early",
+    "💉 Vaccine Mandate Updates",
+    "🏛️ Medicaid Expansion Debates",
+    "👴 Senior Care Costs Soar",
+    "🧬 Gene Therapy Approvals 2025",
+]
+
+# CSS Styles with Logo, Ticker & Image Styles
 st.markdown("""
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@700;800&display=swap');
     
     :root {
         --navy: #1e3a5f;
@@ -47,37 +66,155 @@ st.markdown("""
     .block-container { padding: 0.5rem 1rem !important; max-width: 100% !important; }
     .stApp { background: #eef2f6; }
     
-    /* Dropdown font fixes */
+    /* Dropdown fixes */
     .stSelectbox [data-baseweb="select"] span,
     .stSelectbox [data-baseweb="select"] div { font-size: 12px !important; }
     [data-baseweb="menu"] li { font-size: 12px !important; padding: 8px 12px !important; }
     [role="option"] div { font-size: 12px !important; }
     
-    /* Header */
+    /* ============= HEADER WITH LOGO & TICKER ============= */
     .main-header {
         background: linear-gradient(135deg, var(--navy) 0%, var(--navy-light) 100%);
         color: white;
-        padding: 12px 20px;
+        padding: 10px 20px 8px 20px;
         border-radius: 8px;
         margin-bottom: 12px;
         border-bottom: 3px solid var(--coral);
+        overflow: hidden;
     }
     
-    .header-content {
+    .header-top {
         display: flex;
         justify-content: space-between;
         align-items: center;
     }
     
-    .logo { font-size: 18px; font-weight: 700; }
-    .tagline { font-size: 11px; color: var(--coral); font-weight: 600; letter-spacing: 1px; }
+    /* Logo Section */
+    .logo-section {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+    
+    .logo-icon {
+        width: 45px;
+        height: 45px;
+        background: linear-gradient(135deg, var(--coral) 0%, #ff8e8e 100%);
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 24px;
+        box-shadow: 0 4px 15px rgba(255, 107, 107, 0.4);
+        position: relative;
+    }
+    
+    .logo-icon::after {
+        content: '';
+        position: absolute;
+        width: 12px;
+        height: 12px;
+        background: var(--green);
+        border-radius: 50%;
+        top: -2px;
+        right: -2px;
+        border: 2px solid var(--navy);
+        animation: pulse-dot 2s infinite;
+    }
+    
+    @keyframes pulse-dot {
+        0%, 100% { transform: scale(1); opacity: 1; }
+        50% { transform: scale(1.2); opacity: 0.8; }
+    }
+    
+    .logo-text {
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .logo-title {
+        font-family: 'Poppins', sans-serif !important;
+        font-size: 22px;
+        font-weight: 800;
+        letter-spacing: -0.5px;
+        line-height: 1.1;
+    }
+    
+    .logo-title span {
+        color: var(--coral);
+    }
+    
+    .logo-subtitle {
+        font-size: 9px;
+        color: rgba(255,255,255,0.7);
+        text-transform: uppercase;
+        letter-spacing: 2px;
+        font-weight: 600;
+    }
+    
+    /* Trending Ticker */
+    .ticker-section {
+        flex: 1;
+        margin-left: 30px;
+        overflow: hidden;
+        position: relative;
+    }
+    
+    .ticker-label {
+        position: absolute;
+        left: 0;
+        top: 50%;
+        transform: translateY(-50%);
+        background: var(--coral);
+        color: white;
+        padding: 4px 10px;
+        font-size: 9px;
+        font-weight: 700;
+        text-transform: uppercase;
+        border-radius: 4px;
+        z-index: 2;
+        letter-spacing: 0.5px;
+    }
+    
+    .ticker-wrapper {
+        margin-left: 80px;
+        overflow: hidden;
+        mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
+        -webkit-mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
+    }
+    
+    .ticker-content {
+        display: flex;
+        animation: ticker 30s linear infinite;
+        white-space: nowrap;
+    }
+    
+    .ticker-item {
+        display: inline-flex;
+        align-items: center;
+        padding: 0 25px;
+        font-size: 11px;
+        color: rgba(255,255,255,0.9);
+        font-weight: 500;
+    }
+    
+    .ticker-item::after {
+        content: '•';
+        margin-left: 25px;
+        color: var(--coral);
+    }
+    
+    @keyframes ticker {
+        0% { transform: translateX(0); }
+        100% { transform: translateX(-50%); }
+    }
     
     /* Progress Steps */
     .progress-bar {
         display: flex;
         align-items: center;
-        margin-top: 12px;
-        padding-top: 12px;
+        margin-top: 10px;
+        padding-top: 10px;
         border-top: 1px solid rgba(255,255,255,0.15);
     }
     
@@ -88,15 +225,15 @@ st.markdown("""
     }
     
     .step-dot {
-        width: 28px;
-        height: 28px;
+        width: 26px;
+        height: 26px;
         border-radius: 50%;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 11px;
+        font-size: 10px;
         font-weight: 700;
-        margin-right: 8px;
+        margin-right: 6px;
         flex-shrink: 0;
     }
     
@@ -109,7 +246,7 @@ st.markdown("""
         50% { transform: scale(1.15); }
     }
     
-    .step-text { font-size: 10px; color: rgba(255,255,255,0.7); }
+    .step-text { font-size: 9px; color: rgba(255,255,255,0.7); }
     .step-text.run { color: var(--yellow); font-weight: 600; }
     .step-text.ok { color: var(--green); }
     
@@ -117,11 +254,11 @@ st.markdown("""
         flex: 1;
         height: 2px;
         background: rgba(255,255,255,0.2);
-        margin: 0 10px;
+        margin: 0 8px;
     }
     .step-line.ok { background: var(--green); }
     
-    /* Panel */
+    /* ============= PANELS ============= */
     .panel-title {
         font-size: 11px;
         font-weight: 700;
@@ -133,7 +270,6 @@ st.markdown("""
         border-bottom: 2px solid var(--coral);
     }
     
-    /* Topic Label */
     .topic-lbl {
         font-size: 11px;
         font-weight: 600;
@@ -173,10 +309,8 @@ st.markdown("""
     .seo-box.bad .seo-num { color: #ef4444; }
     .seo-txt { font-size: 9px; color: var(--gray); }
     
-    /* Check Item */
     .chk { padding: 5px 0; font-size: 11px; }
     
-    /* Image Item */
     .img-box {
         padding: 8px 10px;
         background: var(--light);
@@ -186,7 +320,6 @@ st.markdown("""
         border-radius: 0 4px 4px 0;
     }
     
-    /* Keyword Tag */
     .kw {
         display: inline-block;
         background: var(--navy);
@@ -197,12 +330,12 @@ st.markdown("""
         border-radius: 4px;
     }
     
-    /* Article */
+    /* ============= ARTICLE WITH IMAGES ============= */
     .art-box {
         background: white;
         border-radius: 8px;
         box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-        height: calc(100vh - 140px);
+        height: calc(100vh - 160px);
         display: flex;
         flex-direction: column;
         overflow: hidden;
@@ -249,6 +382,34 @@ st.markdown("""
     .art-body::-webkit-scrollbar { width: 4px; }
     .art-body::-webkit-scrollbar-thumb { background: var(--coral); border-radius: 2px; }
     
+    /* Article Images */
+    .art-image-container {
+        margin: 16px 0;
+        border-radius: 8px;
+        overflow: hidden;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    
+    .art-image {
+        width: 100%;
+        height: auto;
+        display: block;
+    }
+    
+    .art-image-caption {
+        background: var(--light);
+        padding: 8px 12px;
+        font-size: 10px;
+        color: var(--gray);
+        border-left: 3px solid var(--coral);
+    }
+    
+    .art-image-credit {
+        font-size: 9px;
+        color: #999;
+        margin-top: 4px;
+    }
+    
     .art-foot {
         background: var(--light);
         padding: 10px 16px;
@@ -277,7 +438,6 @@ st.markdown("""
         border-radius: 6px !important;
     }
     
-    /* Mode Badge */
     .mode-tag {
         display: inline-block;
         padding: 6px 12px;
@@ -289,7 +449,6 @@ st.markdown("""
     .mode-tag.live { background: #d1fae5; color: var(--green); }
     .mode-tag.demo { background: #fef3c7; color: var(--yellow); }
     
-    /* Empty State */
     .empty-state {
         display: flex;
         flex-direction: column;
@@ -302,7 +461,6 @@ st.markdown("""
     .empty-icon { font-size: 60px; margin-bottom: 16px; }
     .empty-text { font-size: 14px; }
     
-    /* Generating State */
     .generating-state {
         display: flex;
         flex-direction: column;
@@ -323,6 +481,56 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
+# Healthcare stock images (royalty-free placeholders)
+HEALTHCARE_IMAGES = {
+    "medicare": [
+        ("https://images.unsplash.com/photo-1576091160550-2173dba999ef?w=600", "Senior patient consulting with healthcare provider", "Unsplash"),
+        ("https://images.unsplash.com/photo-1559757148-5c350d0d3c56?w=600", "Medical professional reviewing patient records", "Unsplash"),
+    ],
+    "medicaid": [
+        ("https://images.unsplash.com/photo-1538108149393-fbbd81895907?w=600", "Community health clinic serving patients", "Unsplash"),
+        ("https://images.unsplash.com/photo-1579684385127-1ef15d508118?w=600", "Healthcare accessibility illustration", "Unsplash"),
+    ],
+    "insurance": [
+        ("https://images.unsplash.com/photo-1450101499163-c8848c66ca85?w=600", "Health insurance documentation", "Unsplash"),
+        ("https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?w=600", "Financial planning for healthcare", "Unsplash"),
+    ],
+    "hospital": [
+        ("https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?w=600", "Modern hospital facility", "Unsplash"),
+        ("https://images.unsplash.com/photo-1586773860418-d37222d8fce3?w=600", "Hospital corridor and medical equipment", "Unsplash"),
+    ],
+    "prescription": [
+        ("https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=600", "Prescription medications and pharmacy", "Unsplash"),
+        ("https://images.unsplash.com/photo-1587854692152-cbe660dbde88?w=600", "Pharmaceutical drugs close-up", "Unsplash"),
+    ],
+    "default": [
+        ("https://images.unsplash.com/photo-1505751172876-fa1923c5c528?w=600", "Healthcare professional at work", "Unsplash"),
+        ("https://images.unsplash.com/photo-1551076805-e1869033e561?w=600", "Medical stethoscope and equipment", "Unsplash"),
+        ("https://images.unsplash.com/photo-1581595220892-b0739db3ba8c?w=600", "Doctor consultation with patient", "Unsplash"),
+    ]
+}
+
+def get_article_images(category, title):
+    """Get relevant images based on article category and title"""
+    title_lower = title.lower()
+    category_lower = category.lower()
+    
+    # Match keywords to image categories
+    if "medicare" in title_lower or "medicare" in category_lower:
+        images = HEALTHCARE_IMAGES["medicare"]
+    elif "medicaid" in title_lower or "medicaid" in category_lower:
+        images = HEALTHCARE_IMAGES["medicaid"]
+    elif "insurance" in title_lower or "plan" in category_lower:
+        images = HEALTHCARE_IMAGES["insurance"]
+    elif "hospital" in title_lower or "facility" in title_lower:
+        images = HEALTHCARE_IMAGES["hospital"]
+    elif "drug" in title_lower or "prescription" in title_lower or "pharma" in title_lower:
+        images = HEALTHCARE_IMAGES["prescription"]
+    else:
+        images = HEALTHCARE_IMAGES["default"]
+    
+    return images
+
 # Session State
 for k, v in [('api_key', os.environ.get('OPENAI_API_KEY', '')), ('model', 'gpt-4o'), 
              ('result', None), ('mode', None), ('agent', 0), ('generating', False)]:
@@ -337,8 +545,13 @@ def run_gen(orch, tq, cp, cb):
     finally:
         loop.close()
 
-def get_progress_html(agent_num):
-    """Generate progress bar HTML for given agent number"""
+def get_header_html(agent_num):
+    """Generate header with logo, ticker, and progress"""
+    # Build ticker content (duplicate for seamless loop)
+    ticker_items = "".join([f'<span class="ticker-item">{t}</span>' for t in TRENDING_TOPICS])
+    ticker_html = ticker_items + ticker_items  # Duplicate for seamless animation
+    
+    # Build progress steps
     steps = ["Trend Discovery", "Content Writer", "SEO Examiner", "Consolidator"]
     steps_html = ""
     
@@ -364,29 +577,68 @@ def get_progress_html(agent_num):
     
     return f"""
         <div class="main-header">
-            <div class="header-content">
-                <span class="logo">🏥 HealthPulse USA</span>
-                <span class="tagline">AI-POWERED HEALTHCARE CONTENT GENERATOR</span>
+            <div class="header-top">
+                <div class="logo-section">
+                    <div class="logo-icon">💊</div>
+                    <div class="logo-text">
+                        <div class="logo-title">Health<span>Pulse</span> USA</div>
+                        <div class="logo-subtitle">AI Healthcare Content</div>
+                    </div>
+                </div>
+                <div class="ticker-section">
+                    <div class="ticker-label">🔥 TRENDING</div>
+                    <div class="ticker-wrapper">
+                        <div class="ticker-content">{ticker_html}</div>
+                    </div>
+                </div>
             </div>
             <div class="progress-bar">{steps_html}</div>
         </div>
     """
 
+def insert_images_in_content(content, images):
+    """Insert images after first H2 heading in content"""
+    if not images:
+        return content
+    
+    # Get first image
+    img_url, caption, credit = images[0]
+    
+    image_html = f"""
+    <div class="art-image-container">
+        <img src="{img_url}" alt="{caption}" class="art-image" onerror="this.style.display='none'">
+        <div class="art-image-caption">
+            📷 {caption}
+            <div class="art-image-credit">Image: {credit}</div>
+        </div>
+    </div>
+    """
+    
+    # Insert after first </h2> or after first paragraph
+    if "</h2>" in content:
+        parts = content.split("</h2>", 1)
+        return parts[0] + "</h2>" + image_html + parts[1]
+    elif "</p>" in content:
+        parts = content.split("</p>", 1)
+        return parts[0] + "</p>" + image_html + parts[1]
+    
+    return image_html + content
+
 def main():
     api_key = st.session_state.api_key
     is_valid = api_key and api_key.startswith('sk-') and len(api_key) > 20
     
-    # Determine agent state for display
+    # Determine agent state
     if st.session_state.result:
-        display_agent = 5  # All done
+        display_agent = 5
     elif st.session_state.generating:
         display_agent = st.session_state.agent
     else:
         display_agent = 0
     
-    # Header placeholder for dynamic updates
+    # Header placeholder
     header_placeholder = st.empty()
-    header_placeholder.markdown(get_progress_html(display_agent), unsafe_allow_html=True)
+    header_placeholder.markdown(get_header_html(display_agent), unsafe_allow_html=True)
     
     # Layout
     col1, col2, col3, col4 = st.columns([1, 2.5, 1, 1.2])
@@ -405,9 +657,7 @@ def main():
         st.markdown('<div class="topic-lbl">Specific Topic</div>', unsafe_allow_html=True)
         spec_topics = get_specific_topics(main_cat, sub_cat)
         
-        # FIXED: Only show specific topics if available, no duplicate ALL
         if spec_topics and sub_cat != "ALL":
-            # Filter out any "ALL" that might be in spec_topics and add it once at the beginning
             filtered_topics = [t for t in spec_topics if t.upper() != "ALL"]
             spec = st.selectbox("c3", ["ALL"] + filtered_topics, label_visibility="collapsed")
         else:
@@ -452,6 +702,12 @@ def main():
             int_l = ", ".join(r.article.internal_links[:3]) if r.article.internal_links else "-"
             ext_l = ", ".join(r.article.external_links[:3]) if r.article.external_links else "-"
             
+            # Get relevant images
+            images = get_article_images(r.category_path, r.article.title)
+            
+            # Insert image into content
+            content_with_images = insert_images_in_content(r.article.content, images)
+            
             article_placeholder.markdown(f"""
                 <div class="art-box">
                     <div class="art-head">
@@ -460,7 +716,7 @@ def main():
                         <div class="art-meta">{datetime.now().strftime("%b %d, %Y")} • {r.article.word_count} words • SEO: {r.seo_validation.overall_score:.0f}% • {st.session_state.mode}</div>
                     </div>
                     <div class="art-desc">{r.article.meta_description}</div>
-                    <div class="art-body">{r.article.content}</div>
+                    <div class="art-body">{content_with_images}</div>
                     <div class="art-foot"><b>Internal:</b> {int_l} | <b>External:</b> {ext_l}</div>
                 </div>
             """, unsafe_allow_html=True)
@@ -538,13 +794,11 @@ def main():
         st.session_state.generating = True
         st.session_state.agent = 1
         
-        # Update header to show first agent running
-        header_placeholder.markdown(get_progress_html(1), unsafe_allow_html=True)
+        header_placeholder.markdown(get_header_html(1), unsafe_allow_html=True)
         
         agent_names = ["", "Trend Discovery", "Content Writer", "SEO Examiner", "Consolidator"]
         
         def update_progress(msg, pct):
-            """Update progress based on percentage"""
             if pct <= 25:
                 new_agent = 1
             elif pct <= 50:
@@ -554,12 +808,9 @@ def main():
             else:
                 new_agent = 4
             
-            # Only update if agent changed
             if new_agent != st.session_state.agent:
                 st.session_state.agent = new_agent
-                # Update the header with new progress
-                header_placeholder.markdown(get_progress_html(new_agent), unsafe_allow_html=True)
-                # Update article panel to show current agent
+                header_placeholder.markdown(get_header_html(new_agent), unsafe_allow_html=True)
                 article_placeholder.markdown(f"""
                     <div class="art-box">
                         <div class="generating-state">
@@ -582,8 +833,7 @@ def main():
                 st.session_state.result = result
                 st.session_state.agent = 5
                 st.session_state.generating = False
-                # Show all complete
-                header_placeholder.markdown(get_progress_html(5), unsafe_allow_html=True)
+                header_placeholder.markdown(get_header_html(5), unsafe_allow_html=True)
                 st.rerun()
             else:
                 st.error("Generation failed - please try again")
